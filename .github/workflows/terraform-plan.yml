@@ -1,11 +1,6 @@
-name: 'terraform-apply'
+name: 'terraform-plan'
 on:
-  workflow_dispatch:
-    inputs: 
-      project_id: 
-        description: 'GCP Project ID'
-        required: true
-        type: string
+  workflow_dispatch: {}
 
 jobs:
   terraform:
