@@ -9,7 +9,7 @@ jobs:
       GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_CREDS }}
     steps:
       - name: 'Terraform Init'
-        run: terraform init
+        run: terraform -chdir=01-docker-terraform/terraform init 
       
       - name: 'Terraform Plan'
-        run: terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}" 
+        run: terraform -chdir=01-docker-terraform/terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}" 
