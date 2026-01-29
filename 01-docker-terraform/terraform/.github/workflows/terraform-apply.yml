@@ -1,0 +1,20 @@
+name: 'terraform-apply'
+on:
+  workflow_dispatch:
+    inputs: 
+      project_id: 
+        description: 'GCP Project ID'
+        required: true
+        type: string
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_CREDS }}
+    steps:
+      - name: 'Terraform Init'
+        run: terraform init
+      
+      - name: 'Terraform Plan'
+        run: terraform plan -var="project_id=${{ secrets.GCP_PROJECT_ID }}" 
