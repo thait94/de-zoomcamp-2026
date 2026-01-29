@@ -9,17 +9,17 @@ terraform {
 
 provider "google" {
   credentials = var.credentials
-  project = "project-378b4ffb-57b4-4f0b-91f"
-  region  = "us-central1"
+  project = var.project
+  region  = var.region
 
 }
 
 resource "google_storage_bucket" "test-bucket" {
-  name     = "project-378b4ffb-57b4-4f0b-91f-terra-bucket"
-  location = "US"
+  name     = var.gcs_bucket_name
+  location = var.location
 
   # Optional, but recommended settings:
-  storage_class               = "STANDARD"
+  storage_class               = var.gcs_storage_class
   uniform_bucket_level_access = true
 
   versioning {
@@ -39,5 +39,5 @@ resource "google_storage_bucket" "test-bucket" {
 }
 
 resource "google_bigquery_dataset" "test-dataset" {
-  dataset_id = "terra_bq_dataset"
+  dataset_id = var.bq_dataset_name
 }
