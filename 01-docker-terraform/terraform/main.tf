@@ -37,3 +37,7 @@ resource "google_storage_bucket" "test-bucket" {
 
   force_destroy = true
 }
+
+resource "google_bigquery_dataset" "test-dataset" {
+  dataset_id = "terra_bq_dataset"
+}
