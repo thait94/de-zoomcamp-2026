@@ -8,3 +8,6 @@ dependencies = [
     "pandas>=3.0.0",
     "pyarrow>=23.0.0",
 ]
+
+[dependency-groups]
+dev = []
