@@ -3,109 +3,86 @@
 # 3. Use pgadmin to run queries 
 
 # Note: Make sure to run docker-compose file to create volumes and then run the Dockerfile to reference this pipeline
+# The docker-compose file will create a network by default named as [folder_name]_default 
+# Make sure to run these commands below with that network name 
+# Then docker build -t docker-hw:1.0 .
+# Then docker run -it --rm --network=homework_default docker-hw:1.0
 
 import pandas as pd
+import pyarrow.parquet as pq
 from sqlalchemy import create_engine
 from tqdm.auto import tqdm
 
-greentrip_dtype = {
-    "VendorID": "Int64",
-    "store_and_fwd_flag": "string",
-    "RatecodeID": "float64",
-    "PULocationID": "Int64",
-    "DOLocationID": "Int64",
-    "passenger_count": "Int64",
-    "trip_distance": "float64",
-    "fare_amount": "float64",
-    "extra": "float64",
-    "mta_tax": "float64",
-    "tip_amount": "float64",
-    "tolls_amount": "float64",
-    "ehail_fee": "float64",
-    "improvement_surcharge": "float64",
-    "total_amount": "float64",
-    "payment_type": "Int64",
-    "trip_type": "float64",
-    "congestion_surcharge": "float64",
-    "cbd_congestion_fee": "float64"
-}
+pg_user = 'root'
+pg_pass = 'root'
+pg_host = 'pgdatabase'
+pg_port = 5432
+pg_db = 'ny_taxi'
+engine = create_engine(f'postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}')
 
-parse_greentrip_dates = [
-    "lpep_pickup_datetime",
-    "lpep_dropoff_datetime"
-]
+def ingest_csv():
 
-taxizone_lookup_dtype = {
-    "LocationID": "Int64", 
-    "Borough": "string", 
-    "Zone": "string", 
-    "service_zone": "string"
-}
-
-def ingest_data():
-    location = './data/green_tripdata_2025-11.parquet'
-    pg_user = 'root'
-    pg_pass = 'root'
-    pg_host = 'localhost'
-    pg_port = 5432
-    pg_db = 'ny_taxi'
-    taxi_table = 'green_taxi_data'
-    lookup_table = 'taxi_zone_lookup'
-    chunksize = 100000
-
-    engine = create_engine(f'postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}')
+    table_name = 'taxi_zone_lookup'
+    
+    taxizone_lookup_dtype = {
+        "LocationID": "Int64", 
+        "Borough": "string", 
+        "Zone": "string", 
+        "service_zone": "string"
+    }
 
     # Create a dataframe for taxi zone lookup data
-    taxizone_lookup_df = pd.read_csv('./data/taxi_zone_lookup.csv', header=0, dtype=taxizone_lookup_dtype, engine=engine)
+    taxizone_lookup_df = pd.read_csv(
+        './data/taxi_zone_lookup.csv', 
+        header=0, 
+        dtype=taxizone_lookup_dtype
+    )
 
     # Load the header to the db 
     taxizone_lookup_df.head(0).to_sql(
-        name=lookup_table, 
+        name=table_name, 
         con=engine, 
         if_exists="replace"
     )
 
     # Load the rest of the data to the db 
     taxizone_lookup_df.to_sql(
-        name=lookup_table, 
+        name=table_name, 
         con=engine, 
         if_exists="append"
     )
 
-    # Create an iterator for green trip data
-    greentrip_df_iter = pd.read_parquet(
-        location, 
-        dtype=greentrip_dtype,
-        parse_dates=parse_greentrip_dates, 
-        iterator=True, 
-        chunksize=chunksize
-    )
+
+def ingest_parquet(): 
+    table_name = 'green_taxi_data'
+    location = './data/green_tripdata_2025-11.parquet'
 
     first = True
+    greentrip_pq = pq.ParquetFile(location)
 
-    # Loop through iterator and add data to db 
-    for greentrip_chunk in tqdm(greentrip_df_iter):
+    for batch in greentrip_pq.iter_batches(10000):
+        batch_df = batch.to_pandas()
 
         if first:
-            # Create table schema (no data)
-            greentrip_chunk.head(0).to_sql(
-                name=taxi_table,
+            batch_df.head(0).to_sql(
+                name=table_name,
                 con=engine,
-                if_exists="replace"
+                if_exists='replace'
             )
             first = False
-            print("Table created")
 
-        # Insert chunk
-        greentrip_chunk.to_sql(
-            name=taxi_table,
+        batch_df.to_sql(
+            name=table_name,
             con=engine,
-            if_exists="append"
+            if_exists='append'
         )
 
-if __name__ == '__main__':
-    ingest_data()
 
+        
+
+if __name__ == '__main__':
+    ingest_csv()
+    ingest_parquet()
 
 
 
